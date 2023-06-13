@@ -4,9 +4,21 @@
   "description": "Hyperwarp backend server, serves frontend, runs backend for managing game processes.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@ltd/j-toml": "^1.38.0",
+    "chalk": "^5.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.1.4",
+    "express": "^4.18.2",
+    "express-jwt": "^8.4.1",
+    "lodash": "^4.17.21",
+    "mkdirp": "^3.0.1"
+  }
 }
