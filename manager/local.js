@@ -6,11 +6,7 @@ import mkdirp from "mkdirp";
 import config from "../config.js";
 import { execAsync } from "../utils.js";
 
-export class LocalManager extends Manager {
-    constructor(){
-        super();
-    }
-}
+import child_process from "child_process";
 
 // we use null sinks, to recieve and capture audio. 
 class AudioManager { // compatible with pipewire ofc
@@ -37,17 +33,50 @@ export class LocalApplication extends ApplicationInstance {
     persistenceDir = path.join(process.env.HOME, ".stargate", "userdata");
     sessionDataDir;
 
+    /**
+     *
+     * @param {string[]} args
+     * @memberof LocalApplication
+     */
+    processArgs(args){
+
+    }
+
     loadConfig(){
         this.persistenceDir = process.env.STARGATE_USERDATA || config.managementOptions || this.persistenceDir;
     }
 
-    start(){
+    async start(){
         this.loadConfig();
         this.sessionDataDir = path.join(this.persistenceDir, this.user.id);
 
     }
 }
 
+export class LocalManager extends Manager {
+    constructor(){
+        super();
+    }
 
+    async start(){
+        if(!config.managementOptions.disableStartupAudioCleanup) await audio.cleanup();
+    }
+
+    proc;
+
+     /**
+     * Creates an instance of ApplicationInstance.
+     * @param {import("./types").User} user User data
+     * @param {import("./types").AppSpec} appSpecs Application specifacation
+     * @memberof Manager
+     */
+    async launch(user, appSpecs, sessionData = {}){
+        let sid = await super.launch(user, appSpecs, sessionData);
+        let app = new LocalApplication(user, appSpecs, sid, this);
+        this.instMap.set(sid, app);
+        await app.start();
+        return sid;
+    }
+}
 
 export default LocalManager;

@@ -45,6 +45,10 @@ export class Manager {
 
     }
 
+    async start(){
+
+    }
+
     generateSessionID(){
         // we rely on this to be unpreidctable
         return crypto.randomUUID();
@@ -56,7 +60,7 @@ export class Manager {
      * @param {import("./types").AppSpec} appSpecs Application specifacation
      * @memberof Manager
      */
-    launch(user, appSpecs, sessionData = {}){
+    async launch(user, appSpecs, sessionData = {}){
         let sid = this.generateSessionID();
         // to be called by subclass for actual launching
         this.sessionMap.set(sid, {
