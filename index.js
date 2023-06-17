@@ -10,6 +10,10 @@ import {config} from "./config.js";
 
 const app = express();
 
+import cors from "cors";
+
+app.use(cors()); // TODO, allow restricting domains. 
+
 import LocalManager from "./manager/local.js";
 
 import crypto from "crypto";
