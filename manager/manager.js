@@ -27,12 +27,16 @@ export class ApplicationInstance {
         this.manager = parentManager;
     }
 
-    start(){
+    async start(){
         
     }
     
-    stop(){
+    async stop(){
         this.manager.deleteSession(this.sid);
+    }
+
+    async requestStop(){
+        
     }
 }
 
@@ -71,6 +75,12 @@ export class Manager {
         return sid;
     }
 
+    /**
+     *
+     * @param {string} id
+     * @return {ApplicationInstance} 
+     * @memberof Manager
+     */
     getSession(id){
         return this.sessionMap.get(id);
     }

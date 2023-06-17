@@ -15,8 +15,11 @@ export let config = {
     }]:[],
     secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32)).buffer).toString("base64"),
     managementOptions: {
-        pipewire: true && !process.env.PULSEAUDIO
-    }
+        pipewire: true && !process.env.PULSEAUDIO,
+        hyperwarpPath: "/opt/hyperwarp",
+        procExitRequestTimeoutMs: 30 * 1000
+    },
+    sessionMaxLength: "1d"
 };
 
 export function loadConfig(){
@@ -67,3 +70,5 @@ export function loadConfig(){
 }
 
 loadConfig();
+
+export default config;

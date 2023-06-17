@@ -2,6 +2,7 @@ export interface User {
     id: string;
     appWhitelist?: string;
     admin: false;
+    name?: string;
 }
 
 export interface AppSpec{
@@ -9,4 +10,6 @@ export interface AppSpec{
     id?: string; 
     rewriteHome?: boolean;
     rewriteData?: boolean;
+    args?: string[];
+    env?: {[key: string]: string};
 }
