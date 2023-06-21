@@ -3,6 +3,8 @@ export interface User {
     appWhitelist?: string;
     admin: false;
     name?: string;
+    canStartSession: boolean;
+    canListApps: boolean;
 }
 
 export interface AppSpec{
@@ -12,4 +14,7 @@ export interface AppSpec{
     rewriteData?: boolean;
     args?: string[];
     env?: {[key: string]: string};
+    displayName?: string;
+    description?: string;
+    poster?: string;
 }

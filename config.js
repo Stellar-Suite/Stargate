@@ -60,7 +60,7 @@ export function loadConfig(){
             }
             return true;
         }).map(user => {
-            return _.defaults(defaultUser,user);
+            return _.defaults(user, defaultUser);
         });
     }else{
         logger.warn("Config specifies no users. ");

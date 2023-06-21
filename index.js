@@ -34,6 +34,13 @@ let auth = expressjwt({
     path: "/api/v1/try_login" // todo don't hardcode version maybe?
 });
 
+import morgan from "morgan";
+if(process.env.NODE_ENV == "production"){
+    app.use(morgan("combined"));
+}else{
+    app.use(morgan("dev"));
+}
+
 app.get("/api/v1/check", (req,res) => res.json({
     ok: true
 }));
@@ -58,6 +65,7 @@ router.all("/try_login", (req, res) => {
     }
     // password length leak?
     let user = config.users.find(user => (user.accessToken && user.accessToken.length == accessToken && crypto.timingSafeEqual(Buffer.from(user.accessToken), Buffer.from(accessToken))) || (user.password && accessToken.length == user.password.length && crypto.timingSafeEqual(Buffer.from(user.password), Buffer.from(accessToken))));
+    console.log("Matched",user)
     if(!user){
         res.status(401).send("Invalid `accessToken` provided. ");
         return;
@@ -65,7 +73,7 @@ router.all("/try_login", (req, res) => {
         res.json({
             jwt: jwt.sign({
                     id: user.id,
-                    username: user.username, // not all users have this
+                    name: user.name, // not all users have this
                     server: "stargate",
                     timestamp: Date.now()
             },config.secret, {
@@ -77,7 +85,17 @@ router.all("/try_login", (req, res) => {
     }
 });
 
-app.use("/api/v1",auth, router);
+router.get("/apps", (req, res) => {
+    res.json({
+        ok: true,
+        data: config.appSpecs
+    });
+});
+
+// Session Management
+let userSessions = new Map();
+
+app.use("/api/v1",auth,router);
 
 // fallback to serving static if no routes are hit
 app.use("/", express.static("user_static"));
