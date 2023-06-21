@@ -1,8 +1,10 @@
 export const defaultAppSpec = {
     rewriteHome: true,
-    rewriteDataDirs: true
+    rewriteDataDirs: true,
+    poster: "/assets/poster_placeholder.png"
 }
 
 export const defaultUser = {
-    admin: false
+    admin: false,
+    canStartSession: true
 }

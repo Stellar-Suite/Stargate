@@ -130,3 +130,4 @@ dist
 config.toml
 # clone a frontend of your choice into here
 public/*
+user_static

@@ -80,8 +80,8 @@ router.all("/try_login", (req, res) => {
 app.use("/api/v1",auth, router);
 
 // fallback to serving static if no routes are hit
+app.use("/", express.static("user_static"));
 app.use("/", express.static("public"));
-
 
 app.listen(8001, () => {
     logger.info("Server is listening on port 8001");
