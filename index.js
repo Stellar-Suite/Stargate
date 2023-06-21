@@ -34,6 +34,9 @@ let auth = expressjwt({
     path: "/api/v1/try_login" // todo don't hardcode version maybe?
 });
 
+app.get("/api/v1/check", (req,res) => res.json({
+    ok: true
+}));
 
 // Router
 const router = express.Router();
@@ -42,10 +45,11 @@ router.use(express.json());
 router.use(express.urlencoded({extended: false}));
 
 // access token might be an alternate login method that is used on every request
+// ok I switched to passwords for now, stuff is still referencing access tokens though
 router.all("/try_login", (req, res) => {
-    let accessToken = req.method != "GET" && req.body && req.body.accessToken;
+    let accessToken = req.method != "GET" && req.body && (req.body.accessToken || req.body.password);
     if(req.query.at && !accessToken){
-        // quick test thing
+        // quick test thing that allows token to be specified in url. 
         accessToken = req.query.at;
     }
     if(!accessToken){
