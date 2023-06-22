@@ -65,7 +65,6 @@ router.all("/try_login", (req, res) => {
     }
     // password length leak?
     let user = config.users.find(user => (user.accessToken && user.accessToken.length == accessToken && crypto.timingSafeEqual(Buffer.from(user.accessToken), Buffer.from(accessToken))) || (user.password && accessToken.length == user.password.length && crypto.timingSafeEqual(Buffer.from(user.password), Buffer.from(accessToken))));
-    console.log("Matched",user)
     if(!user){
         res.status(401).send("Invalid `accessToken` provided. ");
         return;
@@ -89,6 +88,17 @@ router.get("/apps", (req, res) => {
     res.json({
         ok: true,
         data: config.appSpecs
+    });
+});
+
+router.get("/app/:id", (req, res) => {
+    let appSpec = config.appSpecs.find(appSpec => appSpec.id == req.params.id);
+    if(!appSpec){
+        res.status(404).send("App not found. ");
+    }
+    res.json({
+        ok: true,
+        data: appSpec
     });
 });
 
