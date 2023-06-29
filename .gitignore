@@ -130,4 +130,6 @@ dist
 config.toml
 # clone a frontend of your choice into here
 public/*
-user_static
+user_static/*
+!user_static/README.md
+!user_static/assets/.gitkeep

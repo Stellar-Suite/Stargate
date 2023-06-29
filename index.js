@@ -45,6 +45,14 @@ app.get("/api/v1/check", (req,res) => res.json({
     ok: true
 }));
 
+// for simulating lag during dev
+function sleep(ms){
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms);
+    });
+}
+
+
 // Router
 const router = express.Router();
 
@@ -92,9 +100,11 @@ router.get("/apps", (req, res) => {
 });
 
 router.get("/app/:id", (req, res) => {
-    let appSpec = config.appSpecs.find(appSpec => appSpec.id == req.params.id);
+    // console.log(config.appSpecs, " ",req.params.id);
+    let appSpec = config.appSpecs.find(appSpec => appSpec.id === req.params.id);
     if(!appSpec){
         res.status(404).send("App not found. ");
+        return;
     }
     res.json({
         ok: true,
@@ -102,14 +112,118 @@ router.get("/app/:id", (req, res) => {
     });
 });
 
+router.get("/jwt", (req, res) => res.json(req.auth));
+
+
 // Session Management
 let userSessions = new Map();
+
+m.on("deleteSession", (id) => {
+    console.log("Deleting",id);
+    let toDelete = [];
+    for(let pair of userSessions.entries()){
+        if(pair[1] == id){
+            toDelete.push(pair[0]);
+        }
+    }
+    for(let uid of toDelete){
+        userSessions.delete(uid);
+    }
+})
+
+function getSessionFor(uid){
+    return m.getSession(userSessions.get(uid));
+}
+
+function getUser(req){
+    let user = config.users.find(user => user.id == req.auth.id);
+    if(!user) return null;
+    return user;
+}
+
+function getUidOf(req){
+    let id = getUser(req).id;
+    return id;
+}
+
+router.post("/session", async (req, res) => {
+    // for simulating lag in development
+    // await sleep(1000);
+    let uid = getUidOf(req);
+    let user = getUser(req);
+    if(!uid){
+        res.status(403).send("Invalid user. ");
+        return;
+    }
+    if(!req.body || !req.body.app) return res.status(400).send("No app specified. ");
+    let appSpec = config.appSpecs.find(appSpec => appSpec.id === req.body.app);
+    if(!appSpec){
+        res.status(404).send("App not found. ");
+        return;
+    }
+    if(!user.canStartSession){
+        res.status(403).send("User cannot start sessions. ");
+        return;
+    }
+    if(userSessions.get(user.id)){
+        res.status(409).json({
+            ok: false,
+            message: "User already has another session",
+            currentSessionID: userSessions.get(user.id),
+            data: userSessions.get(user.id)
+        });
+        return;
+    }
+    userSessions.set(user.id, {placeholder: true});
+    let sid = await m.launch(user, appSpec, {});
+    userSessions.set(user.id, sid);
+    res.json({
+        ok: true,
+        sessionID: sid,
+        data: sid
+    });
+});
+
+router.get("/session/:id", (req, res) => {
+    let uid = getUidOf(req);
+    if(!uid){
+        res.status(403).send("Invalid user. ");
+        return;
+    }
+    console.log("Lookup",req.params.id);
+    let session = m.getSession(req.params.id);
+    if(!session){
+        res.status(404).send("Session not found. ");
+        return;
+    }
+    res.json({
+        ok: true,
+        data: session.serialize()
+    });
+});
+
+
+router.delete("/session", async (req,res) => {
+    let uid = getUidOf(req);
+    if(!uid){
+        res.status(403).send("Invalid user. ");
+        return;
+    }
+    if(!userSessions.get(uid)){
+        res.status(404).send("User has no session. ");
+        return;
+    }
+    await getSessionFor(uid).requestStop();
+    res.json({
+        ok: true
+    });
+});
 
 app.use("/api/v1",auth,router);
 
 // fallback to serving static if no routes are hit
-app.use("/", express.static("user_static"));
-app.use("/", express.static("public"));
+app.use(express.static("user_static"));
+app.use(express.static("static"));
 
 app.listen(8001, () => {
     logger.info("Server is listening on port 8001");

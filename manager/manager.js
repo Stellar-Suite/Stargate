@@ -1,4 +1,7 @@
-export class ApplicationInstance {
+import crypto from "crypto";
+import {EventEmitter} from "events";
+
+export class ApplicationInstance extends EventEmitter {
     
 
     user;
@@ -12,6 +15,8 @@ export class ApplicationInstance {
      */
     manager;
 
+    ready = false;
+
     /**
      * Creates an instance of ApplicationInstance.
      * @param {import("./types").User} user User data
@@ -21,6 +26,7 @@ export class ApplicationInstance {
      * @memberof ApplicationInstance
      */
     constructor(user, appSpecs, sid, parentManager){
+        super();
         this.user = user;
         this.appSpecs = appSpecs;
         this.sid = sid;
@@ -33,20 +39,33 @@ export class ApplicationInstance {
     
     async stop(){
         this.manager.deleteSession(this.sid);
+        this.emit("deleteSession", this.sid);
     }
 
     async requestStop(){
         
     }
+
+    serialize(){
+        return {
+            admin:{
+                id: this.user.id,
+                name: this.user.name,
+            },
+            appSpecs: this.appSpecs,
+            sid: this.sid,
+            ready: this.ready
+        }
+    }
 }
 
-export class Manager {
+export class Manager extends EventEmitter {
 
     instMap = new Map();
     sessionMap = new Map();
 
     constructor(){
-
+        super();
     }
 
     async start(){
@@ -82,7 +101,7 @@ export class Manager {
      * @memberof Manager
      */
     getSession(id){
-        return this.sessionMap.get(id);
+        return this.instMap.get(id) || this.sessionMap.get(id);
     }
 
     /**

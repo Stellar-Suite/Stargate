@@ -2,6 +2,7 @@ import {Manager, ApplicationInstance} from "./manager.js";
 
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 import {mkdirp} from "mkdirp";
 import config from "../config.js";
@@ -60,7 +61,7 @@ export class LocalApplication extends ApplicationInstance {
     }
 
     loadConfig(){
-        this.persistenceDir = process.env.STARGATE_USERDATA || config.managementOptions || this.persistenceDir;
+        this.persistenceDir = process.env.STARGATE_USERDATA || config.managementOptions.persistenceDir || this.persistenceDir;
     }
 
     audioSinkID;
@@ -89,13 +90,14 @@ export class LocalApplication extends ApplicationInstance {
             "HYPERWARP_USER_ID": this.user.id,
             "HYPERWARP_ENABLED": "1",
             "LD_PRELOAD": LD_PRELOAD
+            // TODO: ask hyperwarp to capture
         }
     }
 
     async start(){
         this.loadConfig();
-        this.makeDirs();
         this.sessionDataDir = path.join(this.persistenceDir, this.user.id);
+        this.makeDirs();
         this.audioSinkID = this.user.id;
         
         if(AUDIO_SUPPORT) await audio.allocate(this.audioSinkID);
@@ -123,7 +125,6 @@ export class LocalApplication extends ApplicationInstance {
         });
 
         // log pipe
-
         this.proc.stdout.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-stdout.log")));
         this.proc.stderr.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-stderr.log")));
     }
@@ -139,6 +140,7 @@ export class LocalApplication extends ApplicationInstance {
     }
 
     async stop(){
+        console.log("Proc exited");
         await super.stop(); // remove from manager
         this.proc = null;
     }

@@ -31,7 +31,10 @@ export function loadConfig(){
     }
     let configStr = fs.readFileSync('config.toml', 'utf8');
 
-    let configDeserialized = TOML.parse(configStr);
+    let configDeserialized = TOML.parse(configStr, {
+        joiner: "\n",
+        multilineStringJoiner: "\n"
+    });
     if(configDeserialized.appSpecs && configDeserialized.appSpecs.length > 0){
         config.appSpecs = configDeserialized.appSpecs.map(appSpec => {
             return _.defaultsDeep(appSpec, defaultAppSpec);
@@ -66,7 +69,7 @@ export function loadConfig(){
         logger.warn("Config specifies no users. ");
     }
 
-    config.managementOptions = configDeserialized.managementOptions; 
+    config.managementOptions = (configDeserialized.managementOptions || config.managementOptions); 
 }
 
 loadConfig();
