@@ -89,12 +89,13 @@ export class LocalApplication extends ApplicationInstance {
             "HYPERWARP_SESSION_ID": this.sid,
             "HYPERWARP_USER_ID": this.user.id,
             "HYPERWARP_ENABLED": "1",
-            "LD_PRELOAD": LD_PRELOAD
+            "LD_PRELOAD": LD_PRELOAD,
+            "CAPTURE_MODE": "1"
             // TODO: ask hyperwarp to capture
         }
     }
 
-    async start(){
+    async _start(){
         this.loadConfig();
         this.sessionDataDir = path.join(this.persistenceDir, this.user.id);
         this.makeDirs();
@@ -139,9 +140,9 @@ export class LocalApplication extends ApplicationInstance {
         return {};
     }
 
-    async stop(){
-        console.log("Proc exited");
-        await super.stop(); // remove from manager
+    async _stop(){
+        console.log("Local app stopped");
+        await super._stop(); // remove from manager
         this.proc = null;
     }
 
@@ -193,8 +194,8 @@ export class LocalManager extends Manager {
      * @param {import("./types").AppSpec} appSpecs Application specifacation
      * @memberof Manager
      */
-    async launch(user, appSpecs, sessionData = {}){
-        let sid = await super.launch(user, appSpecs, sessionData);
+    async _launch(user, appSpecs, sessionData = {}){
+        let sid = await super._launch(user, appSpecs, sessionData);
         let app = new LocalApplication(user, appSpecs, sid, this);
         this.instMap.set(sid, app);
         await app.start();

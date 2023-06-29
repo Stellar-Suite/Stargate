@@ -33,17 +33,28 @@ export class ApplicationInstance extends EventEmitter {
         this.manager = parentManager;
     }
 
-    async start(){
+    async _start(){
         
     }
+
+    async start(){
+        this.emit("prestart");
+        await this._start();
+        this.emit("start");
+    }
     
-    async stop(){
+    async _stop(){
         this.manager.deleteSession(this.sid);
-        this.emit("deleteSession", this.sid);
+    }
+
+    async stop(){
+        this.emit("prestop");
+        await this._stop();
+        this.emit("stop");
     }
 
     async requestStop(){
-        
+        // TODO: event emitters and internal impl?
     }
 
     serialize(){
@@ -83,7 +94,7 @@ export class Manager extends EventEmitter {
      * @param {import("./types").AppSpec} appSpecs Application specifacation
      * @memberof Manager
      */
-    async launch(user, appSpecs, sessionData = {}){
+    async _launch(user, appSpecs, sessionData = {}){
         let sid = this.generateSessionID();
         // to be called by subclass for actual launching
         this.sessionMap.set(sid, {
@@ -92,6 +103,20 @@ export class Manager extends EventEmitter {
             ...sessionData
         });
         return sid;
+    }
+
+    /**
+     * Creates an instance of ApplicationInstance.
+     * @param {import("./types").User} user User data
+     * @param {import("./types").AppSpec} appSpecs Application specifacation
+     * @memberof Manager
+     */
+    async launch(){
+        this.emit("prelaunchSession");
+        let result = await this._launch(...arguments);
+        // console.log("launchSession",result);
+        this.emit("launchSession", result);
+        return result;
     }
 
     /**
@@ -112,5 +137,6 @@ export class Manager extends EventEmitter {
     deleteSession(id){
         this.sessionMap.delete(id);
         this.instMap.delete(id); // instance calls this when it dies
+        this.emit("deleteSession", id);
     }
 }

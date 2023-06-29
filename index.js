@@ -8,17 +8,29 @@ import * as logger from "./logger.js";
 
 import {config} from "./config.js";
 
+import http from "http";
+
 const app = express();
+
+const server = http.createServer(app);
 
 import cors from "cors";
 
 app.use(cors()); // TODO, allow restricting domains. 
 
-import LocalManager from "./manager/local.js";
+import LocalManager, { LocalApplication } from "./manager/local.js";
 
 import crypto from "crypto";
 
 import jwt from "jsonwebtoken";
+
+import {Server} from "socket.io";
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE"]
+    }
+});
 
 let m = new LocalManager();
 
@@ -35,6 +47,7 @@ let auth = expressjwt({
 });
 
 import morgan from "morgan";
+
 if(process.env.NODE_ENV == "production"){
     app.use(morgan("combined"));
 }else{
@@ -51,7 +64,6 @@ function sleep(ms){
         setTimeout(resolve, ms);
     });
 }
-
 
 // Router
 const router = express.Router();
@@ -225,6 +237,54 @@ app.use("/api/v1",auth,router);
 app.use(express.static("user_static"));
 app.use(express.static("static"));
 
-app.listen(8001, () => {
-    logger.info("Server is listening on port 8001");
+// our socket.io security mostly relies on people not leaking session ids for guest support. 
+let sockIDtoUid = new Map();
+io.on("connection", (socket) => {
+    socket.on("jwt", (token) => {
+        if(jwt.verify(token,config.secret)){
+            let decoded = jwt.decode(token);
+            if(decoded.server == "stargate"){
+                sockIDtoUid.set(socket.id, decoded.id);
+            }
+        }
+    });
+
+    socket.on("join_channel", (...channels) => {
+        channels.forEach(channel => socket.join(channel));
+    });
+
+    socket.on("leave_channel", (...channels) => {
+        channels.forEach(channel => socket.leave(channel));
+    }); 
+
+    socket.on("close", (code) => {
+        sockIDtoUid.delete(socket.id);
+    });
+});
+
+m.on("launchSession", (sid) => {
+    let session = m.getSession(sid);
+    if(session instanceof LocalApplication){
+        // js "casting"
+        /** @type {LocalApplication} */
+        let localApp = session;
+        let streams = localApp.getStreams();
+        for(let pair of Object.entries(streams)){
+            let [id, stream] = pair;
+            console.log("Piping app's ",id, " of ",sid, " session id to socket");
+            stream.on("data", (data) => {
+                io.to(sid + ":" + id).emit(sid + ":" + id, data);
+            });
+        }
+    }
+});
+
+const port = config.port || 8001;
+
+/*app.listen(port, () => {
+    logger.info("Server is listening on port " + port);
+});*/
+
+server.listen(port, () => {
+    console.log('listening on 127.0.0.1:' + port + " and maybe more hosts. ");
 });
