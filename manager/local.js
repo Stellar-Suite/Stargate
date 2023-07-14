@@ -14,7 +14,7 @@ import child_process from "child_process";
 
 const AUDIO_SUPPORT = !config.managementOptions.disableAudioSupport;
 const HYPERWARP_PATH = process.env.HYPERWARP_PATH || config.managementOptions.hyperwarpPath || "/opt/hyperwarp";
-const HYPERWARP_TARGET = process.env.HYPERWARP_TARGET || config.managementOptions.hyperwarpTarget || "release";
+const HYPERWARP_TARGET = process.env.HYPERWARP_TARGET || config.managementOptions.hyperwarpTarget || "debug";
 
 // we use null sinks, to recieve and capture audio. 
 class AudioManager { // compatible with pipewire ofc
@@ -73,9 +73,9 @@ export class LocalApplication extends ApplicationInstance {
 
     genDataDirsEnv(){
         let env = {};
-        env["XDG_RUNTIME_DIR"] = path.join(this.sessionDataDir, "home");
-        env["HOME"] = path.join(this.sessionDataDir, "home");
-        env["XDG_DATA_DIRS"] = path.join(this.sessionDataDir, "home", ".local", "share");
+        // env["XDG_RUNTIME_DIR"] = path.join(this.sessionDataDir, "home");
+        if(this.appSpecs.rewriteHome) env["HOME"] = path.join(this.sessionDataDir, "home");
+        if(this.appSpecs.rewriteData) env["XDG_DATA_DIRS"] = path.join(this.sessionDataDir, "home", ".local", "share");
         return env;
     }
 
@@ -85,13 +85,15 @@ export class LocalApplication extends ApplicationInstance {
             path.join(HYPERWARP_PATH, "target", HYPERWARP_TARGET, "libhyperwarphooker.so"),
             path.join(HYPERWARP_PATH, "libhyperglue.so")
         ].join(":");
+        
         return {
             "HYPERWARP_SESSION_ID": this.sid,
             "HYPERWARP_USER_ID": this.user.id,
             "HYPERWARP_ENABLED": "1",
             "LD_PRELOAD": LD_PRELOAD,
-            "CAPTURE_MODE": "1"
-            // TODO: ask hyperwarp to capture
+            "CAPTURE_MODE": "1",
+            "DEBUG_HW": config.debug ? "1" : "0",
+            "SDL_AUDIODRIVER": "pulseaudio"
         }
     }
 
@@ -128,6 +130,16 @@ export class LocalApplication extends ApplicationInstance {
         // log pipe
         this.proc.stdout.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-stdout.log")));
         this.proc.stderr.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-stderr.log")));
+
+        if(config.debug){
+            console.log("Spawned pid", this.proc.pid);
+            for(let pair of Object.entries(env)){
+                let [key, value] = pair;
+                console.log(key + "=" + value);
+            }
+            this.proc.stdout.pipe(process.stdout);
+            this.proc.stderr.pipe(process.stderr);
+        }
     }
 
     getStreams(){
@@ -167,7 +179,7 @@ export class LocalManager extends Manager {
     }
 
     async start(){
-        if(!config.managementOptions.disableStartupAudioCleanup) await audio.cleanup();
+        if(!config.managementOptions.disableStartupAudioCleanup && AUDIO_SUPPORT) await audio.cleanup();
         let ok = true;
         if(!(await existsAsync(path.join(HYPERWARP_PATH, "target", HYPERWARP_TARGET, "libhyperwarphooker.so")))){
             logger.warn("Hyperwarp hook is not found, please build it first with `make`. ");

@@ -19,7 +19,8 @@ export let config = {
         hyperwarpPath: "/opt/hyperwarp",
         procExitRequestTimeoutMs: 30 * 1000
     },
-    sessionMaxLength: "1d"
+    sessionMaxLength: "1d",
+    debug: false
 };
 
 export function loadConfig(){
@@ -51,6 +52,8 @@ export function loadConfig(){
         logger.warn("No secret found in config.toml or in environment variables, generating a new one. This will invalidate all existing sessions every server restart. Consider specifying a secret in config.toml or in environment variables.");
     }
 
+    if("debug" in configDeserialized) config.debug = configDeserialized.debug; 
+
     if(configDeserialized.users && configDeserialized.users.length > 0){
         config.users = configDeserialized.users.filter((user, index) => {
             if(!user.id){
@@ -70,6 +73,8 @@ export function loadConfig(){
     }
 
     config.managementOptions = (configDeserialized.managementOptions || config.managementOptions); 
+
+    // console.log(config.managementOptions);
 }
 
 loadConfig();
