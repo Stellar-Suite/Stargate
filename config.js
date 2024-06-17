@@ -17,10 +17,14 @@ export let config = {
     managementOptions: {
         pipewire: true && !process.env.PULSEAUDIO,
         hyperwarpPath: "/opt/hyperwarp",
+        streamerPath: "/opt/streamerd",
+        hyperwarpTarget: "release",
         procExitRequestTimeoutMs: 30 * 1000
     },
     sessionMaxLength: "1d",
-    debug: false
+    debug: false,
+    memoryDebug: false,
+    flameGraph: false
 };
 
 export function loadConfig(){

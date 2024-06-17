@@ -15,6 +15,7 @@ import child_process from "child_process";
 const AUDIO_SUPPORT = !config.managementOptions.disableAudioSupport;
 const HYPERWARP_PATH = process.env.HYPERWARP_PATH || config.managementOptions.hyperwarpPath || "/opt/hyperwarp";
 const HYPERWARP_TARGET = process.env.HYPERWARP_TARGET || config.managementOptions.hyperwarpTarget || "debug";
+const STREAMERD_PATH = process.env.STREAMERD_PATH || config.managementOptions.streamerPath || "/opt/streamerd";
 
 // we use null sinks, to recieve and capture audio. 
 class AudioManager { // compatible with pipewire ofc
@@ -34,6 +35,10 @@ class AudioManager { // compatible with pipewire ofc
 }
 
 export let audio = new AudioManager();
+
+function sleep(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // we assume one user runs one app at a time, so their user id is used as a key
 export class LocalApplication extends ApplicationInstance {
@@ -69,6 +74,7 @@ export class LocalApplication extends ApplicationInstance {
     async makeDirs(){
         await mkdirp(path.join(this.sessionDataDir, "home"));
         await mkdirp(path.join(this.sessionDataDir, "logfiles"));
+        await mkdirp("/tmp/hyperwarp");
     }
 
     genDataDirsEnv(){
@@ -77,6 +83,10 @@ export class LocalApplication extends ApplicationInstance {
         if(this.appSpecs.rewriteHome) env["HOME"] = path.join(this.sessionDataDir, "home");
         if(this.appSpecs.rewriteData) env["XDG_DATA_DIRS"] = path.join(this.sessionDataDir, "home", ".local", "share");
         return env;
+    }
+
+    getSocketPath(){
+        return path.join("/tmp/hyperwarp", `hw-${this.sid}.sock`);   
     }
 
     genHyperwarpEnv(){
@@ -89,6 +99,10 @@ export class LocalApplication extends ApplicationInstance {
         return {
             "HYPERWARP_SESSION_ID": this.sid,
             "HYPERWARP_USER_ID": this.user.id,
+            // effective params
+            "HW_SOCKET_PATH": this.getSocketPath(),
+            "HW_SESSION_ID": this.sid,
+            "HW_USER_ID": this.user.id,
             "HYPERWARP_ENABLED": "1",
             "LD_PRELOAD": LD_PRELOAD,
             "CAPTURE_MODE": "1",
@@ -140,16 +154,91 @@ export class LocalApplication extends ApplicationInstance {
             this.proc.stdout.pipe(process.stdout);
             this.proc.stderr.pipe(process.stderr);
         }
+
+        // wait for socket to exist
+        let tries = 0;
+        while(tries < 10){
+            if(await existsAsync(this.getSocketPath())){
+                break;
+            }else{
+                logger.info("Socket not found yet on try " + tries);
+            }
+            await sleep(1000);
+        }
+        if(tries < 10){
+            // launch streamer
+            await sleep(1000);
+            logger.info("Launching streamerd");
+            this.streamer = this.spawnStreamerd();
+
+        }else{
+            logger.error("App is not opening communication socket. This may be an issue. We are not starting streamerd yet.")
+        }
+    }
+
+    spawnStreamerd(){
+        let args = [
+            "--socket", this.getSocketPath(),
+            "--mode", "hyperwarp"
+        ];
+
+        let binary = STREAMERD_PATH;
+
+        let extra_env = {};
+        if(config.memoryDebug){
+            // doesn't work?
+            logger.info("Memory debugging enabled. Adding extra env vars to streamerd.");
+            extra_env["RUST_LOG"] = "debug";
+            extra_env["RUST_BACKTRACE"] = "full";
+            // work on fedora but may need to change for other distros
+            // extra_env["LD_PRELOAD"] = "/usr/lib64/libtcmalloc.so.4";
+            // extra_env["HEAPPROFILE"] = "/tmp/heap.prof";
+            // for jemalloc
+            extra_env["MALLOC_CONF"] = "prof:true,prof_leak:true,lg_prof_sample:19,stats_print:true,prof_prefix:/tmp/jeprof.out";
+        }
+
+        if(config.flameGraph){
+            logger.info("Applying flamegraph for profiling");
+            binary = "flamegraph";
+            args.unshift(STREAMERD_PATH);
+            args.unshift("--");
+            args.unshift("/tmp/streamerd.svg");
+            args.unshift("-o");
+        }
+
+        logger.info("cmd: " + binary + " " + args.join(" "));
+
+        let proc = child_process.spawn(binary, args, {
+            env: {
+                ...process.env,
+                "HYPERWARP_SESSION_ID": this.sid,
+                "HYPERWARP_USER_ID": this.user.id,
+                "RUST_BACKTRACE": "1",
+                "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
+                ...extra_env
+            }
+        });
+
+        proc.stdout.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-streamer-stdout.log")));
+        proc.stderr.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-streamer-stderr.log")));
+
+        proc.stdout.pipe(process.stdout);
+        proc.stderr.pipe(process.stderr);
+
+        return proc;
     }
 
     getStreams(){
+        const output = {}
         if(this.proc){
-            return {
-                stdout: this.proc.stdout,
-                stderr: this.proc.stderr
-            }
+            output.stdout = this.proc.stdout,
+            output.stderr = this.proc.stderr
         }
-        return {};
+        if(this.streamer){
+            output.streamer_stdout = this.streamer.stdout;
+            output.streamer_stderr = this.streamer.stderr;
+        }
+        return output;
     }
 
     async _stop(){

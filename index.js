@@ -241,11 +241,17 @@ app.use(express.static("static"));
 let sockIDtoUid = new Map();
 io.on("connection", (socket) => {
     socket.on("jwt", (token) => {
-        if(jwt.verify(token,config.secret)){
-            let decoded = jwt.decode(token);
-            if(decoded.server == "stargate"){
-                sockIDtoUid.set(socket.id, decoded.id);
+        try{
+            if(jwt.verify(token,config.secret)){
+                let decoded = jwt.decode(token);
+                if(decoded.server == "stargate"){
+                    sockIDtoUid.set(socket.id, decoded.id);
+                }
             }
+        }catch(ex){
+            console.log("Invalid token",token);
+            socket.emit("invalidToken", true);
+            socket.disconnect();
         }
     });
 
