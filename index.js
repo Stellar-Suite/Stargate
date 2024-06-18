@@ -196,6 +196,22 @@ router.post("/session", async (req, res) => {
     });
 });
 
+router.post("/session/secret/check", async (req, res) => {
+    if(req.body.sid){
+        let session = m.getSession(req.body.sid);
+        if(session.secret != req.body.secret){
+            res.status(403).send("Invalid secret. ");
+            return;
+        }
+        res.json({
+            ok: true
+        });
+    }else{
+        res.status(400).send("No `sid` provided in POST body. ");
+        return;
+    }
+});
+
 router.get("/session/:id", (req, res) => {
     let uid = getUidOf(req);
     if(!uid){
@@ -238,14 +254,21 @@ app.use(express.static("user_static"));
 app.use(express.static("static"));
 
 // our socket.io security mostly relies on people not leaking session ids for guest support. 
-let sockIDtoUid = new Map();
+let sockIDMap = new Map();
 io.on("connection", (socket) => {
+    sockIDMap.set(socket.id, {
+        uid: null,
+        sid: null,
+        privs: 0
+    });
     socket.on("jwt", (token) => {
         try{
             if(jwt.verify(token,config.secret)){
                 let decoded = jwt.decode(token);
                 if(decoded.server == "stargate"){
-                    sockIDtoUid.set(socket.id, decoded.id);
+                    let socketObj = sockIDMap.get(socket.id);
+                    socketObj.uid = decoded.id;
+                    sockIDMap.set(socket.id, socketObj);
                 }
             }
         }catch(ex){
@@ -253,6 +276,25 @@ io.on("connection", (socket) => {
             socket.emit("invalidToken", true);
             socket.disconnect();
         }
+    });
+
+    socket.on("join_session", (sid) => {
+        let socketObj = sockIDMap.get(socket.id);
+        if(m.getSession(sid)){
+            socketObj.privs = 1;
+            socketObj.sid = sid;
+        }
+        sockIDMap.set(socket.id, socketObj);
+    });
+
+    socket.on("upgrade_privs", (secret) => {
+        let socketObj = sockIDMap.get(socket.id);
+        let session = m.findBySecret(secret);
+        if(session){
+            socketObj.privs = 2;
+            socketObj.sid = session.sid;
+        }
+        sockIDMap.set(socket.id, socketObj);
     });
 
     socket.on("join_channel", (...channels) => {
@@ -264,7 +306,7 @@ io.on("connection", (socket) => {
     }); 
 
     socket.on("close", (code) => {
-        sockIDtoUid.delete(socket.id);
+        sockIDMap.delete(socket.id);
     });
 });
 

@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {EventEmitter} from "events";
+import {nanoid} from "nanoid"
 
 export class ApplicationInstance extends EventEmitter {
     
@@ -7,6 +8,8 @@ export class ApplicationInstance extends EventEmitter {
     user;
     appSpecs;
     sid;
+
+    secret;
 
     /**
      * The manager that created this instance
@@ -31,10 +34,11 @@ export class ApplicationInstance extends EventEmitter {
         this.appSpecs = appSpecs;
         this.sid = sid;
         this.manager = parentManager;
+        this.secret = nanoid(64);
     }
 
     async _start(){
-        
+         
     }
 
     async start(){
@@ -127,6 +131,14 @@ export class Manager extends EventEmitter {
      */
     getSession(id){
         return this.instMap.get(id) || this.sessionMap.get(id);
+    }
+
+    findSession(func){
+        return this.sessionMap.values().find(func);
+    }
+
+    findBySecret(secret){
+        return this.sessionMap.values().find(session => session.secret == secret);
     }
 
     /**

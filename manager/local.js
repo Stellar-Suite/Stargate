@@ -199,6 +199,7 @@ export class LocalApplication extends ApplicationInstance {
         }
 
         if(config.flameGraph){
+            // this doesn't work please use the actual flamegraph pid option from somewhere else
             logger.info("Applying flamegraph for profiling");
             binary = "flamegraph";
             args.unshift(STREAMERD_PATH);
