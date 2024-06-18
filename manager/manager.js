@@ -60,8 +60,13 @@ export class ApplicationInstance extends EventEmitter {
     }
 
     set_state(state){
-        this.state = state;
-        this.emit("state", state);
+        if(state != this.state){
+            this.emit("stateChangePre", this.state, state);
+            let oldState = this.state;
+            this.state = state;
+            this.emit("stateChange", this.state, oldState);
+            this.emit("state", this.state);
+        }
     }
 
     async requestStop(){
@@ -78,7 +83,8 @@ export class ApplicationInstance extends EventEmitter {
             sid: this.sid,
             ready: this.state >= SESSION_STATE.Ready,
             state: this.state,
-            state_enum: SESSION_STATE_BY_NUMBER[this.state]
+            state_enum: SESSION_STATE_BY_NUMBER[this.state],
+            acls: {} // TODO: acls
         }
     }
 }
@@ -142,10 +148,22 @@ export class Manager extends EventEmitter {
         return this.instMap.get(id) || this.sessionMap.get(id);
     }
 
+    /**
+     *
+     * @param {any} func
+     * @return {ApplicationInstance} 
+     * @memberof Manager
+     */
     findSession(func){
         return this.sessionMap.values().find(func);
     }
 
+    /**
+     *
+     * @param {any} func
+     * @return {ApplicationInstance} 
+     * @memberof Manager
+     */
     findBySecret(secret){
         return this.sessionMap.values().find(session => session.secret == secret);
     }

@@ -218,6 +218,7 @@ export class LocalApplication extends ApplicationInstance {
                 "HYPERWARP_USER_ID": this.user.id,
                 "RUST_BACKTRACE": "1",
                 "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
+                "STARGATE_SECRET": this.secret,
                 ...extra_env
             }
         });

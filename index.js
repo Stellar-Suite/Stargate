@@ -264,6 +264,7 @@ io.on("connection", (socket) => {
         sid: null,
         privs: 0
     });
+    socket.emit("hello", config.streamerdTargetHttpAddr, config.debug);
     socket.on("jwt", (token) => {
         try{
             if(jwt.verify(token,config.secret)){
@@ -307,8 +308,13 @@ io.on("connection", (socket) => {
         if(session){
             socketObj.privs = 2;
             socketObj.sid = session.sid;
+            // this exists to make it easier to write the rust portion
+            session.setState(SESSION_STATE.Handshaking);
+            socket.emit("upgraded", true);
+            socket.emit("session_id", session.sid);
         }
         sockIDMap.set(socket.id, socketObj);
+        cb();
     });
 
     socket.on("set_session_state", (state) => {
