@@ -306,7 +306,7 @@ io.on("connection", (socket) => {
 
     socket.on("upgrade_privs", (secret) => {
         let socketObj = sockIDMap.get(socket.id);
-        let session = m.findBySecret(secret);
+        let session = m.findInstanceBySecret(secret);
         if(config.debug){
             logger.info(socket.id + " claims secret is " + secret);
         }
@@ -319,15 +319,18 @@ io.on("connection", (socket) => {
             session.setState(SESSION_STATE.Handshaking);
             socket.emit("upgraded", true);
             socket.emit("session_id", session.sid);
+        }else{
+            logger.info("Denied " + socket.id + " from privliged upgrade operation due to invalid secret.");
         }
         sockIDMap.set(socket.id, socketObj);
-        cb();
     });
 
     socket.on("set_session_state", (state) => {
         let socketObj = sockIDMap.get(socket.id);
         if(socketObj.sid && socketObj.privs >= 2){
             m.getSession(socketObj.sid).setState(state);
+        } else {
+            logger.info("Denied " + socket.id + " from privliged state set operation.");
         }
     });
 

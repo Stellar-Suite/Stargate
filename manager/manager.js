@@ -157,8 +157,8 @@ export class Manager extends EventEmitter {
      * @return {ApplicationInstance} 
      * @memberof Manager
      */
-    findSession(func){
-        return Array.from(this.sessionMap.values()).find(func);
+    findInstance(func){
+        return Array.from(this.instMap.values()).find(func);
     }
 
     /**
@@ -167,8 +167,8 @@ export class Manager extends EventEmitter {
      * @return {ApplicationInstance} 
      * @memberof Manager
      */
-    findBySecret(secret){
-        return Array.from(this.sessionMap.values()).find(session => session.secret == secret);
+    findInstanceBySecret(secret){
+        return Array.from(this.instMap.values()).find(inst => inst.secret == secret);
     }
 
     /**
