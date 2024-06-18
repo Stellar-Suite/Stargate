@@ -180,7 +180,8 @@ export class LocalApplication extends ApplicationInstance {
     spawnStreamerd(){
         let args = [
             "--socket", this.getSocketPath(),
-            "--mode", "hyperwarp"
+            "--mode", "hyperwarp",
+            "--url", config.streamerdTargetHttpAddr
         ];
 
         let binary = STREAMERD_PATH;

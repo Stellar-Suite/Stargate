@@ -24,7 +24,9 @@ export let config = {
     sessionMaxLength: process.env.NODE_ENV == "production" ? "1d" : "7d", // new development default, will change my life
     debug: false,
     memoryDebug: false,
-    flameGraph: false
+    flameGraph: false,
+    port: 8001,
+    streamerdTargetHttpAddr: null
 };
 
 export function loadConfig(){
@@ -77,6 +79,12 @@ export function loadConfig(){
     }
 
     config.managementOptions = (configDeserialized.managementOptions || config.managementOptions); 
+
+    // TODO: create our own section in the toml for configuring streamerd
+    if(!config.streamerdTargetHttpAddr){
+        // make a guess if this is not specified
+        config.streamerdTargetHttpAddr = "http://127.0.0.1:" + config.port;
+    }
 
     // console.log(config.managementOptions);
 }
