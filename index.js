@@ -264,7 +264,7 @@ io.on("connection", (socket) => {
         sid: null,
         privs: 0
     });
-    socket.emit("hello", config.streamerdTargetHttpAddr, config.debug);
+    socket.emit("hello", config.streamerdTargetHttpAddr, config.debug ? true: false);
     socket.on("jwt", (token) => {
         try{
             if(jwt.verify(token,config.secret)){
