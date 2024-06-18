@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import {EventEmitter} from "events";
 import {nanoid} from "nanoid"
-import { SESSION_STATE, SESSION_STATE_BY_NUMBER } from "../protocol";
+import { SESSION_STATE, SESSION_STATE_BY_NUMBER } from "../protocol.js";
 import { stat } from "fs";
 
 export class ApplicationInstance extends EventEmitter {
