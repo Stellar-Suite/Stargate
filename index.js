@@ -25,6 +25,9 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
 import {Server} from "socket.io";
+
+import {SESSION_STATE} from "./protocol.js"
+
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -280,9 +283,20 @@ io.on("connection", (socket) => {
 
     socket.on("join_session", (sid) => {
         let socketObj = sockIDMap.get(socket.id);
+        if(socketObj.sid){
+            // already in a session
+            socket.emit("error", "Already in a session. Cannot join another session on the same socket.");
+            socket.emit("errorType", "sessionConflict");
+            socket.emit("sessionConflict", true)
+            return;
+        }
         if(m.getSession(sid)){
             socketObj.privs = 1;
             socketObj.sid = sid;
+        }else{
+            socket.emit("error", "Session not found. ");
+            socket.emit("errorType", "sessionNotFound");
+            socket.emit("sessionNotFound", true);
         }
         sockIDMap.set(socket.id, socketObj);
     });
@@ -295,6 +309,13 @@ io.on("connection", (socket) => {
             socketObj.sid = session.sid;
         }
         sockIDMap.set(socket.id, socketObj);
+    });
+
+    socket.on("set_session_state", (state) => {
+        let socketObj = sockIDMap.get(socket.id);
+        if(socketObj.sid && socketObj.privs >= 2){
+            m.getSession(socketObj.sid).setState(state);
+        }
     });
 
     socket.on("join_channel", (...channels) => {

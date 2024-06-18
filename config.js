@@ -21,7 +21,7 @@ export let config = {
         hyperwarpTarget: "release",
         procExitRequestTimeoutMs: 30 * 1000
     },
-    sessionMaxLength: "1d",
+    sessionMaxLength: process.env.NODE_ENV == "production" ? "1d" : "7d", // new development default, will change my life
     debug: false,
     memoryDebug: false,
     flameGraph: false

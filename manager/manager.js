@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import {EventEmitter} from "events";
 import {nanoid} from "nanoid"
+import { SESSION_STATE, SESSION_STATE_BY_NUMBER } from "../protocol";
+import { stat } from "fs";
 
 export class ApplicationInstance extends EventEmitter {
     
@@ -18,7 +20,7 @@ export class ApplicationInstance extends EventEmitter {
      */
     manager;
 
-    ready = false;
+    state = SESSION_STATE.Initalizing;
 
     /**
      * Creates an instance of ApplicationInstance.
@@ -57,6 +59,11 @@ export class ApplicationInstance extends EventEmitter {
         this.emit("stop");
     }
 
+    set_state(state){
+        this.state = state;
+        this.emit("state", state);
+    }
+
     async requestStop(){
         // TODO: event emitters and internal impl?
     }
@@ -69,7 +76,9 @@ export class ApplicationInstance extends EventEmitter {
             },
             appSpecs: this.appSpecs,
             sid: this.sid,
-            ready: this.ready
+            ready: this.state >= SESSION_STATE.Ready,
+            state: this.state,
+            state_enum: SESSION_STATE_BY_NUMBER[this.state]
         }
     }
 }
