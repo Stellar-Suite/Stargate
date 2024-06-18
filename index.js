@@ -307,8 +307,11 @@ io.on("connection", (socket) => {
     socket.on("upgrade_privs", (secret) => {
         let socketObj = sockIDMap.get(socket.id);
         let session = m.findBySecret(secret);
-        logger.info("Upgrading privs of socket " + socket.id + " to " + session.sid);
+        if(config.debug){
+            logger.info(socket.id + " claims secret is " + secret);
+        }
         if(session){
+            logger.info("Upgrading privs of socket " + socket.id + " to " + session.sid);
             socketObj.privs = 2;
             socketObj.sid = session.sid;
             socketObj.uid = null;
