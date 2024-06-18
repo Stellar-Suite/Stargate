@@ -168,7 +168,7 @@ export class Manager extends EventEmitter {
      * @memberof Manager
      */
     findBySecret(secret){
-        return Array.from(this.sessionMap.values()).values().find(session => session.secret == secret);
+        return Array.from(this.sessionMap.values()).find(session => session.secret == secret);
     }
 
     /**
