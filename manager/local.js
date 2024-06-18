@@ -107,7 +107,8 @@ export class LocalApplication extends ApplicationInstance {
             "LD_PRELOAD": LD_PRELOAD,
             "CAPTURE_MODE": "1",
             "DEBUG_HW": config.debug ? "1" : "0",
-            "SDL_AUDIODRIVER": "pulseaudio"
+            "SDL_AUDIODRIVER": "pulseaudio",
+            "RETITLE_WINDOWS": "1"
         }
     }
 
