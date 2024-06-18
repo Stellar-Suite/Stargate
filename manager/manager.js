@@ -56,6 +56,9 @@ export class ApplicationInstance extends EventEmitter {
     async stop(){
         this.emit("prestop");
         await this._stop();
+        if(this.streamer){
+            this.streamer.kill();
+        }
         this.emit("stop");
     }
 
@@ -155,7 +158,7 @@ export class Manager extends EventEmitter {
      * @memberof Manager
      */
     findSession(func){
-        return this.sessionMap.values().find(func);
+        return Array.from(this.sessionMap.values()).find(func);
     }
 
     /**
@@ -165,7 +168,7 @@ export class Manager extends EventEmitter {
      * @memberof Manager
      */
     findBySecret(secret){
-        return this.sessionMap.values().find(session => session.secret == secret);
+        return Array.from(this.sessionMap.values()).values().find(session => session.secret == secret);
     }
 
     /**

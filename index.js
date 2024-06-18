@@ -134,7 +134,7 @@ router.get("/jwt", (req, res) => res.json(req.auth));
 let userSessions = new Map();
 
 m.on("deleteSession", (id) => {
-    console.log("Deleting",id);
+    logger.info("Deleting session of id "  + id);
     let toDelete = [];
     for(let pair of userSessions.entries()){
         if(pair[1] == id){
@@ -259,6 +259,7 @@ app.use(express.static("static"));
 // our socket.io security mostly relies on people not leaking session ids for guest support. 
 let sockIDMap = new Map();
 io.on("connection", (socket) => {
+    logger.info("New socket connection with id " + socket.id);
     sockIDMap.set(socket.id, {
         uid: null,
         sid: null,
@@ -273,6 +274,7 @@ io.on("connection", (socket) => {
                     let socketObj = sockIDMap.get(socket.id);
                     socketObj.uid = decoded.id;
                     sockIDMap.set(socket.id, socketObj);
+                    logger.info("User " + decoded.id + " authenticated with socket id " + socket.id);
                 }
             }
         }catch(ex){
@@ -305,9 +307,11 @@ io.on("connection", (socket) => {
     socket.on("upgrade_privs", (secret) => {
         let socketObj = sockIDMap.get(socket.id);
         let session = m.findBySecret(secret);
+        logger.info("Upgrading privs of socket " + socket.id + " to " + session.sid);
         if(session){
             socketObj.privs = 2;
             socketObj.sid = session.sid;
+            socketObj.uid = null;
             // this exists to make it easier to write the rust portion
             session.setState(SESSION_STATE.Handshaking);
             socket.emit("upgraded", true);
@@ -325,6 +329,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("join_channel", (...channels) => {
+        logger.info(socket.id + " joined channels " + channels.join(", "));
         channels.forEach(channel => socket.join(channel));
     });
 
@@ -333,6 +338,7 @@ io.on("connection", (socket) => {
     }); 
 
     socket.on("close", (code) => {
+        logger.info("Socket " + socket.id + " closed with code " + code);
         sockIDMap.delete(socket.id);
     });
 });

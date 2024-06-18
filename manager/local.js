@@ -229,6 +229,10 @@ export class LocalApplication extends ApplicationInstance {
         proc.stdout.pipe(process.stdout);
         proc.stderr.pipe(process.stderr);
 
+        proc.on("exit", (code) => {
+            logger.info("Streamerd exited with code " + code);
+        });
+
         return proc;
     }
 
