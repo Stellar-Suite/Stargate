@@ -62,7 +62,7 @@ export class ApplicationInstance extends EventEmitter {
         this.emit("stop");
     }
 
-    set_state(state){
+    setState(state){
         if(state != this.state){
             this.emit("stateChangePre", this.state, state);
             let oldState = this.state;
