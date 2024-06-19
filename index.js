@@ -350,13 +350,20 @@ io.on("connection", (socket) => {
         sockIDMap.delete(socket.id);
     });
     
-    socket.on("send_to_session", (...args) => {
+    socket.on("send_to_current_session", (...args) => {
         let socketObj = sockIDMap.get(socket.id);
         if(socketObj.sid){
             let sess = m.getSession(socketObj.sid);
-            if(sess.socketID){
+            if(sess && sess.socketID){
                 io.to(sess.socketID).emit("peer_message",socket.id,...args);
             }
+        }
+    });
+
+    socket.on("send_to_session", (sid, ...args) => {
+        let sess = m.getSession(sid);
+        if(sess && sess.socketID){
+            io.to(sess.socketID).emit("peer_message",socket.id,...args);
         }
     });
 
