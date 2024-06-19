@@ -37,6 +37,7 @@ export class ApplicationInstance extends EventEmitter {
         this.sid = sid;
         this.manager = parentManager;
         this.secret = nanoid(64);
+        this.socketID = null;
     }
 
     async _start(){

@@ -328,7 +328,9 @@ io.on("connection", (socket) => {
     socket.on("set_session_state", (state) => {
         let socketObj = sockIDMap.get(socket.id);
         if(socketObj.sid && socketObj.privs >= 2){
-            m.getSession(socketObj.sid).setState(state);
+            let sess = m.getSession(socketObj.sid);
+            sess.setState(state);
+            sess.socketID = socket.id;
         } else {
             logger.info("Denied " + socket.id + " from privliged state set operation.");
         }
@@ -346,6 +348,22 @@ io.on("connection", (socket) => {
     socket.on("close", (code) => {
         logger.info("Socket " + socket.id + " closed with code " + code);
         sockIDMap.delete(socket.id);
+    });
+    
+    socket.on("send_to_session", (...args) => {
+        let socketObj = sockIDMap.get(socket.id);
+        if(socketObj.sid){
+            let sess = m.getSession(socketObj.sid);
+            if(sess.socketID){
+                io.to(sess.socketID).emit("peer_message",socket.id,...args);
+            }
+        }
+    });
+
+    socket.on("send_to", (target, ...args) => {
+        if(sockIDMap.get(target)){
+            io.to(target).emit("peer_message",socket.id,...args);
+        }
     });
 });
 
