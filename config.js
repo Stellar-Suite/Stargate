@@ -25,6 +25,7 @@ export let config = {
     debug: false,
     memoryDebug: false,
     flameGraph: false,
+    valgrind: false,
     port: 8001,
     streamerdTargetHttpAddr: null
 };

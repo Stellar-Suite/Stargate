@@ -108,7 +108,7 @@ export class LocalApplication extends ApplicationInstance {
             "CAPTURE_MODE": "1",
             "DEBUG_HW": config.debug ? "1" : "0",
             "SDL_AUDIODRIVER": "pulseaudio",
-            "RETITLE_WINDOWS": "1"
+            "RETITLE_WINDOWS": "0"
         }
     }
 
@@ -209,6 +209,13 @@ export class LocalApplication extends ApplicationInstance {
             args.unshift("-o");
         }
 
+        if(config.valgrind){
+            logger.info("Applying valgrind for profiling");
+            binary = "valgrind";
+            args.unshift(STREAMERD_PATH);
+            args.unshift("--leak-check=full");
+        }
+
         logger.info("cmd: " + binary + " " + args.join(" "));
 
         let proc = child_process.spawn(binary, args, {
@@ -223,14 +230,15 @@ export class LocalApplication extends ApplicationInstance {
             }
         });
 
+
         proc.stdout.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-streamer-stdout.log")));
         proc.stderr.pipe(fs.createWriteStream(path.join(this.sessionDataDir, "logfiles", this.sid + "-streamer-stderr.log")));
 
         proc.stdout.pipe(process.stdout);
         proc.stderr.pipe(process.stderr);
 
-        proc.on("exit", (code) => {
-            logger.info("Streamerd exited with code " + code);
+        proc.on("exit", (code, signal) => {
+            logger.info("Streamerd exited with code " + code + " " + signal + " " + proc.exitCode);
         });
 
         return proc;

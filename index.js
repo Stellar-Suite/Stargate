@@ -275,6 +275,7 @@ io.on("connection", (socket) => {
                     socketObj.uid = decoded.id;
                     sockIDMap.set(socket.id, socketObj);
                     logger.info("User " + decoded.id + " authenticated with socket id " + socket.id);
+                    socket.emit("authed", true);
                 }
             }
         }catch(ex){
@@ -351,6 +352,9 @@ io.on("connection", (socket) => {
     });
     
     socket.on("send_to_current_session", (...args) => {
+        if(config.debug) {
+            logger.info(socket.id +  " send to cur args:" + JSON.stringify(args));
+        }
         let socketObj = sockIDMap.get(socket.id);
         if(socketObj.sid){
             let sess = m.getSession(socketObj.sid);
@@ -361,6 +365,9 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send_to_session", (sid, ...args) => {
+        if(config.debug) {
+            logger.info(socket.id +  " send to " + sid + " args:" + JSON.stringify(args));
+        }
         let sess = m.getSession(sid);
         if(sess && sess.socketID){
             io.to(sess.socketID).emit("peer_message",socket.id,...args);
@@ -368,6 +375,14 @@ io.on("connection", (socket) => {
     });
 
     socket.on("send_to", (target, ...args) => {
+        // workaround: rust-socketio limitation serverside lazily
+        if(Array.isArray(target)){
+            args = target.slice(1);
+            target = target[0];
+        }
+        if(config.debug) {
+            logger.info(socket.id +  " send to target " + target + " args:" + JSON.stringify(args));
+        }
         if(sockIDMap.get(target)){
             io.to(target).emit("peer_message",socket.id,...args);
         }

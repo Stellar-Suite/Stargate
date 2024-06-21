@@ -133,3 +133,5 @@ public/*
 user_static/*
 !user_static/README.md
 !user_static/assets/.gitkeep
+# valgrind core files
+vgcore*
