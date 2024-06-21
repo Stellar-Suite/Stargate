@@ -27,7 +27,9 @@ export let config = {
     flameGraph: false,
     valgrind: false,
     port: 8001,
-    streamerdTargetHttpAddr: null
+    streamerdTargetHttpAddr: null,
+    encoder: "H264",
+    optimizations: "None",
 };
 
 export function loadConfig(){
@@ -86,6 +88,13 @@ export function loadConfig(){
         // make a guess if this is not specified
         config.streamerdTargetHttpAddr = "http://127.0.0.1:" + config.port;
     }
+
+    if(configDeserialized.streamerdTargetHttpAddr) config.streamerdTargetHttpAddr = configDeserialized.streamerdTargetHttpAddr;
+    if(configDeserialized.encoder) config.encoder = configDeserialized.encoder;
+    if(configDeserialized.optimizations) config.optimizations = configDeserialized.optimizations;
+    if("memoryDebug" in configDeserialized) config.memoryDebug = configDeserialized.memoryDebug;
+    if("flameGraph" in configDeserialized) config.flameGraph = configDeserialized.flameGraph;
+    if("valgrind" in configDeserialized) config.valgrind = configDeserialized.valgrind;
 
     // console.log(config.managementOptions);
 }

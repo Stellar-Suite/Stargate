@@ -184,6 +184,9 @@ export class LocalApplication extends ApplicationInstance {
             "--url", config.streamerdTargetHttpAddr
         ];
 
+        if(config.encoder) args.push("--encoder", config.encoder);
+        if(config.optimizations) args.push("--optimizations", config.optimizations);
+
         let binary = STREAMERD_PATH;
 
         let extra_env = {};
