@@ -108,7 +108,7 @@ export class LocalApplication extends ApplicationInstance {
             "CAPTURE_MODE": "1",
             "DEBUG_HW": config.debug ? "1" : "0",
             "SDL_AUDIODRIVER": "pulseaudio",
-            "RETITLE_WINDOWS": "0"
+            "RETITLE_WINDOWS": "1"
         }
     }
 
@@ -219,6 +219,11 @@ export class LocalApplication extends ApplicationInstance {
             args.unshift("--leak-check=full");
         }
 
+        if(config.debug){
+            logger.info("Applying gst debug for profiling");
+            extra_env["GST_DEBUG_DUMP_DOT_DIR"] = "/tmp/gst-debug";
+        }
+
         logger.info("cmd: " + binary + " " + args.join(" "));
 
         let proc = child_process.spawn(binary, args, {
@@ -229,6 +234,7 @@ export class LocalApplication extends ApplicationInstance {
                 "RUST_BACKTRACE": "1",
                 "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
                 "STARGATE_SECRET": this.secret,
+                "GST_DEBUG": "INFO",
                 ...extra_env
             }
         });

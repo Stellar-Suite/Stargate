@@ -83,13 +83,15 @@ export function loadConfig(){
 
     config.managementOptions = (configDeserialized.managementOptions || config.managementOptions); 
 
+    if(configDeserialized.streamerdTargetHttpAddr) config.streamerdTargetHttpAddr = configDeserialized.streamerdTargetHttpAddr;
+
     // TODO: create our own section in the toml for configuring streamerd
     if(!config.streamerdTargetHttpAddr){
         // make a guess if this is not specified
         config.streamerdTargetHttpAddr = "http://127.0.0.1:" + config.port;
     }
 
-    if(configDeserialized.streamerdTargetHttpAddr) config.streamerdTargetHttpAddr = configDeserialized.streamerdTargetHttpAddr;
+   
     if(configDeserialized.encoder) config.encoder = configDeserialized.encoder;
     if(configDeserialized.optimizations) config.optimizations = configDeserialized.optimizations;
     if("memoryDebug" in configDeserialized) config.memoryDebug = configDeserialized.memoryDebug;
