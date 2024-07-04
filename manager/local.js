@@ -224,19 +224,29 @@ export class LocalApplication extends ApplicationInstance {
             extra_env["GST_DEBUG_DUMP_DOT_DIR"] = "/tmp/gst-debug";
         }
 
+        if(config.resetLibva){
+            extra_env["LIBVA_DRIVER_NAME"] = "";
+        }
+
         logger.info("cmd: " + binary + " " + args.join(" "));
 
+        let env = {
+            ...process.env,
+            "HYPERWARP_SESSION_ID": this.sid,
+            "HYPERWARP_USER_ID": this.user.id,
+            "RUST_BACKTRACE": "1",
+            "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
+            "STARGATE_SECRET": this.secret,
+            "GST_DEBUG": "INFO",
+            ...extra_env
+        };
+
+        if(config.resetLibva){
+            delete env["LIBVA_DRIVER_NAME"];
+        }
+
         let proc = child_process.spawn(binary, args, {
-            env: {
-                ...process.env,
-                "HYPERWARP_SESSION_ID": this.sid,
-                "HYPERWARP_USER_ID": this.user.id,
-                "RUST_BACKTRACE": "1",
-                "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
-                "STARGATE_SECRET": this.secret,
-                "GST_DEBUG": "INFO",
-                ...extra_env
-            }
+            env: env
         });
 
 

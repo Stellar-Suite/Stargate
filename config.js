@@ -30,6 +30,7 @@ export let config = {
     streamerdTargetHttpAddr: null,
     encoder: "H264",
     optimizations: "None",
+    resetLibva: false,
 };
 
 export function loadConfig(){
@@ -97,6 +98,8 @@ export function loadConfig(){
     if("memoryDebug" in configDeserialized) config.memoryDebug = configDeserialized.memoryDebug;
     if("flameGraph" in configDeserialized) config.flameGraph = configDeserialized.flameGraph;
     if("valgrind" in configDeserialized) config.valgrind = configDeserialized.valgrind;
+    // allows reseting liva driver name
+    if("resetLibva" in configDeserialized) config.resetLibva = configDeserialized.resetLibva;
 
     // console.log(config.managementOptions);
 }
