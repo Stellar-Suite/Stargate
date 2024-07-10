@@ -126,16 +126,20 @@ export class LocalApplication extends ApplicationInstance {
             env["PULSE_SINK"] = this.audioSinkID;
         }
 
-        Object.assign(env, this.appSpecs.env);
-        Object.assign(env, this.genDataDirsEnv());
-        Object.assign(env, this.genHyperwarpEnv());
+        let envChanges = {};
+
+        Object.assign(envChanges, this.appSpecs.env);
+        Object.assign(envChanges, this.genDataDirsEnv());
+        Object.assign(envChanges, this.genHyperwarpEnv());
+
+        Object.assign(env, envChanges);
 
         let binary = this.appSpecs.binary;
         let args = this.processArgs(this.appSpecs.args);
 
         if(config.valgrindChild){
             args.unshift(binary);
-            for(let pair of Object.entries(env)){
+            for(let pair of Object.entries(envChanges)){
                 let [key, value] = pair;
                 args.unshift(key + "=" + value);
             }
