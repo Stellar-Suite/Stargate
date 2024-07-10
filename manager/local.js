@@ -130,10 +130,30 @@ export class LocalApplication extends ApplicationInstance {
         Object.assign(env, this.genDataDirsEnv());
         Object.assign(env, this.genHyperwarpEnv());
 
-        this.proc = child_process.spawn(this.appSpecs.binary, this.processArgs(this.appSpecs.args), {
+        let binary = this.appSpecs.binary;
+        let args = this.processArgs(this.appSpecs.args);
+
+        if(config.valgrindChild){
+            args.unshift(binary);
+            for(let pair of Object.entries(env)){
+                let [key, value] = pair;
+                args.unshift(key + "=" + value);
+            }
+            args.unshift("env");
+            args.unshift("--trace-children=yes");
+            args.unshift("--leak-check=full");
+            binary = "valgrind";
+        }
+
+        if(config.debug){
+            console.log("Binary spawn details");
+            console.log(binary, args.join(" "));
+        }
+
+        this.proc = child_process.spawn(binary, args, {
             stdio: "pipe",
             cwd: this.sessionDataDir,
-            env: env
+            env: config.valgrindChild ? process.env : env
         });
 
         // exit handler
@@ -158,7 +178,7 @@ export class LocalApplication extends ApplicationInstance {
 
         // wait for socket to exist
         let tries = 0;
-        while(tries < 10){
+        while(tries < 30){
             if(await existsAsync(this.getSocketPath())){
                 break;
             }else{
@@ -166,7 +186,7 @@ export class LocalApplication extends ApplicationInstance {
             }
             await sleep(1000);
         }
-        if(tries < 10){
+        if(tries < 30){
             // launch streamer
             await sleep(1000);
             logger.info("Launching streamerd");

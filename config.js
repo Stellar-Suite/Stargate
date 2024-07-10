@@ -26,6 +26,7 @@ export let config = {
     memoryDebug: false,
     flameGraph: false,
     valgrind: false,
+    valgrindChild: false,
     port: 8001,
     streamerdTargetHttpAddr: null,
     encoder: "H264",
@@ -100,6 +101,7 @@ export function loadConfig(){
     if("valgrind" in configDeserialized) config.valgrind = configDeserialized.valgrind;
     // allows reseting liva driver name
     if("resetLibva" in configDeserialized) config.resetLibva = configDeserialized.resetLibva;
+    if("valgrindChild" in configDeserialized) config.valgrindChild = configDeserialized.valgrindChild;
 
     // console.log(config.managementOptions);
 }
