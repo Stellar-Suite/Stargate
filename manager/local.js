@@ -154,10 +154,17 @@ export class LocalApplication extends ApplicationInstance {
             console.log(binary, args.join(" "));
         }
 
+        let childEnv = env;
+        if(config.valgrindChild){
+            childEnv = process.env;
+        }
+
+        console.log("CENV", childEnv);
+
         this.proc = child_process.spawn(binary, args, {
             stdio: "pipe",
             cwd: this.sessionDataDir,
-            env: config.valgrindChild ? process.env : env
+            env: childEnv
         });
 
         // exit handler
