@@ -132,6 +132,12 @@ export class LocalApplication extends ApplicationInstance {
         Object.assign(envChanges, this.genDataDirsEnv());
         Object.assign(envChanges, this.genHyperwarpEnv());
 
+        if(config.alternateSDLLibraryPath){
+            // this works around https://github.com/libsdl-org/SDL/blob/SDL2/docs/README-dynapi.md
+            // because dynmaic loading will use dlsym which we control!
+            envChanges["SDL_DYNAMIC_API"] = config.alternateSDLLibraryPath;
+        }
+
         Object.assign(env, envChanges);
 
         let binary = this.appSpecs.binary;

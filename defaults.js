@@ -5,7 +5,8 @@ export const defaultAppSpec = {
     displayName: "Untitled App",
     description: "No description provided. ",
     args: [],
-    background: "/assets/app_bg_placeholder.png"
+    background: "/assets/app_bg_placeholder.png",
+    alternateSDLLibraryPath: null
 }
 
 export const defaultUser = {
