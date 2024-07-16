@@ -22,6 +22,8 @@ export class ApplicationInstance extends EventEmitter {
 
     state = SESSION_STATE.Initalizing;
 
+    stopeped = true;
+
     /**
      * Creates an instance of ApplicationInstance.
      * @param {import("./types").User} user User data
@@ -46,6 +48,7 @@ export class ApplicationInstance extends EventEmitter {
 
     async start(){
         this.emit("prestart");
+        this.stopped = false;
         await this._start();
         this.emit("start");
     }
@@ -60,6 +63,7 @@ export class ApplicationInstance extends EventEmitter {
         if(this.streamer){
             this.streamer.kill();
         }
+        this.stopped = true;
         this.emit("stop");
     }
 

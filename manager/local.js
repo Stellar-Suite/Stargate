@@ -132,10 +132,12 @@ export class LocalApplication extends ApplicationInstance {
         Object.assign(envChanges, this.genDataDirsEnv());
         Object.assign(envChanges, this.genHyperwarpEnv());
 
-        if(config.alternateSDLLibraryPath){
+        let altSDL = config.alternateSDLLibraryPath || this.appSpecs.alternateSDLLibraryPath;
+        if(altSDL){
             // this works around https://github.com/libsdl-org/SDL/blob/SDL2/docs/README-dynapi.md
             // because dynmaic loading will use dlsym which we control!
-            envChanges["SDL_DYNAMIC_API"] = config.alternateSDLLibraryPath;
+            logger.info("Using alternate SDL library path " + altSDL);
+            envChanges["SDL_DYNAMIC_API"] = altSDL;
         }
 
         Object.assign(env, envChanges);
@@ -143,7 +145,7 @@ export class LocalApplication extends ApplicationInstance {
         let binary = this.appSpecs.binary;
         let args = this.processArgs(this.appSpecs.args);
 
-        if(config.valgrindChild){
+        if(config.valgrindChild || this.appSpecs.valgrindChild){
             args.unshift(binary);
             for(let pair of Object.entries(envChanges)){
                 let [key, value] = pair;
@@ -155,13 +157,13 @@ export class LocalApplication extends ApplicationInstance {
             binary = "valgrind";
         }
 
-        if(config.debug){
+        if(config.debug || this.appSpecs.debug){
             console.log("Binary spawn details");
             console.log(binary, args.join(" "));
         }
 
         let childEnv = env;
-        if(config.valgrindChild){
+        if(config.valgrindChild || this.appSpecs.valgrindChild){
             childEnv = process.env;
         }
 
@@ -207,8 +209,11 @@ export class LocalApplication extends ApplicationInstance {
             // launch streamer
             await sleep(1000);
             logger.info("Launching streamerd");
-            this.streamer = this.spawnStreamerd();
-
+            if(!this.stopped){
+                this.streamer = this.spawnStreamerd();
+            }else{
+                logger.warn("App is stopped, not launching streamerd");
+            }
         }else{
             logger.error("App is not opening communication socket. This may be an issue. We are not starting streamerd yet.")
         }
@@ -239,7 +244,7 @@ export class LocalApplication extends ApplicationInstance {
             extra_env["MALLOC_CONF"] = "prof:true,prof_leak:true,lg_prof_sample:19,stats_print:true,prof_prefix:/tmp/jeprof.out";
         }
 
-        if(config.flameGraph){
+        if(config.flameGraph || this.appSpecs.flameGraph){
             // this doesn't work please use the actual flamegraph pid option from somewhere else
             logger.info("Applying flamegraph for profiling");
             binary = "flamegraph";
@@ -249,7 +254,7 @@ export class LocalApplication extends ApplicationInstance {
             args.unshift("-o");
         }
 
-        if(config.valgrind){
+        if(config.valgrind || this.appSpecs.valgrind){
             logger.info("Applying valgrind for profiling");
             binary = "valgrind";
             args.unshift(STREAMERD_PATH);
