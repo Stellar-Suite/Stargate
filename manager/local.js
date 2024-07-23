@@ -264,6 +264,8 @@ export class LocalApplication extends ApplicationInstance {
         if(config.debug){
             logger.info("Applying gst debug for profiling");
             extra_env["GST_DEBUG_DUMP_DOT_DIR"] = "/tmp/gst-debug";
+            extra_env["GST_DEBUG"] = "INFO";
+            extra_env["RUST_BACKTRACE"] = "1";
         }
 
         if(config.resetLibva){
@@ -277,9 +279,8 @@ export class LocalApplication extends ApplicationInstance {
             "HYPERWARP_SESSION_ID": this.sid,
             "HYPERWARP_USER_ID": this.user.id,
             "RUST_BACKTRACE": "1",
-            "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd
+            "XDG_RUNTIME_DIR": "/run/user/1000", // fix bug with streamerd, TODO: autodetect user id
             "STARGATE_SECRET": this.secret,
-            "GST_DEBUG": "INFO",
             ...extra_env
         };
 
