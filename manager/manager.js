@@ -42,7 +42,7 @@ export class ApplicationInstance extends EventEmitter {
         this.socketID = null;
     }
 
-    async _start(){
+    async _startApp(){
          
     }
 
@@ -62,6 +62,7 @@ export class ApplicationInstance extends EventEmitter {
         await this._stop();
         if(this.streamer){
             this.streamer.kill();
+            delete this.streamer;
         }
         this.stopped = true;
         this.emit("stop");
@@ -94,6 +95,10 @@ export class ApplicationInstance extends EventEmitter {
             state_enum: SESSION_STATE_BY_NUMBER[this.state],
             acls: {} // TODO: acls
         }
+    }
+
+    handleExtension(name, data) {
+        console.warn("Unhandled extension " + name);
     }
 }
 

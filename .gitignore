@@ -135,3 +135,5 @@ user_static/*
 !user_static/assets/.gitkeep
 # valgrind core files
 vgcore*
+debug.sh
+perf.data

@@ -9,6 +9,7 @@ import os from "os";
 // synchronous config load
 export let config = {
     appSpecs: [],
+    profiles: {},
     users: process.env.TEST ? [{
         id: "test",
         password: "1234"       
@@ -19,7 +20,8 @@ export let config = {
         hyperwarpPath: "/opt/hyperwarp",
         streamerPath: "/opt/streamerd",
         hyperwarpTarget: "release",
-        procExitRequestTimeoutMs: 30 * 1000
+        procExitRequestTimeoutMs: 30 * 1000,
+        disableAudioSupport: "DISABLE_AUDIO_SUPPORT" in process.env,
     },
     sessionMaxLength: process.env.NODE_ENV == "production" ? "1d" : "7d", // new development default, will change my life
     debug: false,
@@ -53,6 +55,12 @@ export function loadConfig(){
         });
     }else{
         logger.warn("No appSpecs found in config.toml, server won't be able to do much. Consider checking the docs and adding an app. ");
+    }
+
+    
+
+    if(configDeserialized.profiles && Object.keys(configDeserialized.profiles).length > 0){
+        config.profiles = configDeserialized.profiles; // copy profiles if existing.
     }
 
     if(process.env.SECRET){

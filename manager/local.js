@@ -20,10 +20,12 @@ const STREAMERD_PATH = process.env.STREAMERD_PATH || config.managementOptions.st
 // we use null sinks, to recieve and capture audio. 
 class AudioManager { // compatible with pipewire ofc
     async cleanup(){
+        if(!AUDIO_SUPPORT) return;
         await execAsync("pactl", ["unload-module", "module-null-sink"]);
     }
 
     async allocate(id){
+        if(!AUDIO_SUPPORT) return;
         await execAsync("pactl", ["load-module", "module-null-sink", `sink_name=${id}`]);
         // await execAsync("pactl", ["load-module", "module-loopback", `source=${id}.monitor`, `sink=${id}`]);
     }
@@ -43,7 +45,7 @@ function sleep(ms){
 // we assume one user runs one app at a time, so their user id is used as a key
 export class LocalApplication extends ApplicationInstance {
     constructor(user, appSpecs, sid, parentManager){
-        super(user, appSpecs, sid, parentManager);
+        super(user, {...appSpecs,...(config.profiles[appSpecs.profile || "default"] || {})}, sid, parentManager);
     }
 
     persistenceDir = path.join(process.env.HOME, ".stargate", "userdata");
@@ -89,6 +91,10 @@ export class LocalApplication extends ApplicationInstance {
         return path.join("/tmp/hyperwarp", `hw-${this.sid}.sock`);   
     }
 
+    isinjecting(){
+        return !this.appSpecs.noInject;
+    }
+
     genHyperwarpEnv(){
         const LD_PRELOAD = [
             path.join(HYPERWARP_PATH, "libhyperpreglue.so"),
@@ -96,7 +102,7 @@ export class LocalApplication extends ApplicationInstance {
             path.join(HYPERWARP_PATH, "libhyperglue.so")
         ].join(":");
         
-        return {
+        let env = {
             "HYPERWARP_SESSION_ID": this.sid,
             "HYPERWARP_USER_ID": this.user.id,
             // effective params
@@ -104,15 +110,29 @@ export class LocalApplication extends ApplicationInstance {
             "HW_SESSION_ID": this.sid,
             "HW_USER_ID": this.user.id,
             "HYPERWARP_ENABLED": "1",
-            "LD_PRELOAD": LD_PRELOAD,
             "CAPTURE_MODE": "1",
             "DEBUG_HW": config.debug ? "1" : "0",
-            "SDL_AUDIODRIVER": "pulseaudio",
-            "RETITLE_WINDOWS": "1"
         }
+
+        if(AUDIO_SUPPORT){
+            env["SDL_AUDIODRIVER"] = "pulseaudio";
+        }
+
+        if(this.isinjecting()) {
+            env["LD_PRELOAD"] = LD_PRELOAD;
+            env["RETITLE_WINDOWS"] = "1";
+            if(config.debug || this.appSpecs.debug){
+                env["DEBUG_HW"] = "1";
+            }
+        }
+
+        return env;
     }
 
-    async _start(){
+    async _start() {
+        if(this.appSpecs.profile){
+            logger.info("Using profile " + this.appSpecs.profile);
+        }
         this.loadConfig();
         this.sessionDataDir = path.join(this.persistenceDir, this.user.id);
         this.makeDirs();
@@ -120,6 +140,17 @@ export class LocalApplication extends ApplicationInstance {
         
         if(AUDIO_SUPPORT) await audio.allocate(this.audioSinkID);
 
+        if(this.isinjecting()) {
+            // inject path
+            await this._startApp();
+            this.spawnStreamerdAfterSocket();
+        } else {
+            this.streamer = this.spawnStreamerd();
+            
+        }
+    }
+
+    async _startApp(){
         let env = {};
         Object.assign(env, process.env);
         if(AUDIO_SUPPORT){
@@ -130,7 +161,11 @@ export class LocalApplication extends ApplicationInstance {
 
         Object.assign(envChanges, this.appSpecs.env);
         Object.assign(envChanges, this.genDataDirsEnv());
-        Object.assign(envChanges, this.genHyperwarpEnv());
+        if(this.isinjecting()) {
+            Object.assign(envChanges, this.genHyperwarpEnv());
+        } else if (this.waylandDisplayId) {
+            envChanges["WAYLAND_DISPLAY"] = this.waylandDisplayId;
+        }
 
         let altSDL = config.alternateSDLLibraryPath || this.appSpecs.alternateSDLLibraryPath;
         if(altSDL){
@@ -160,6 +195,10 @@ export class LocalApplication extends ApplicationInstance {
         if(config.debug || this.appSpecs.debug){
             console.log("Binary spawn details");
             console.log(binary, args.join(" "));
+        }
+
+        if(config.resetLibva){
+            delete env["LIBVA_DRIVER_NAME"];
         }
 
         let childEnv = env;
@@ -194,7 +233,9 @@ export class LocalApplication extends ApplicationInstance {
             this.proc.stdout.pipe(process.stdout);
             this.proc.stderr.pipe(process.stderr);
         }
+    }
 
+    async spawnStreamerdAfterSocket(){
         // wait for socket to exist
         let tries = 0;
         while(tries < 30){
@@ -221,13 +262,24 @@ export class LocalApplication extends ApplicationInstance {
 
     spawnStreamerd(){
         let args = [
-            "--socket", this.getSocketPath(),
-            "--mode", "hyperwarp",
+            "--mode", this.isinjecting() ? "hyperwarp" : "wayland-desktop",
             "--url", config.streamerdTargetHttpAddr
         ];
 
+        if(this.isinjecting()) {
+            args.push("--socket", this.getSocketPath());
+        }
+
         if(config.encoder) args.push("--encoder", config.encoder);
-        if(config.optimizations) args.push("--optimizations", config.optimizations);
+        if (this.appSpecs.optimizations) {
+            args.push("--optimizations", this.appSpecs.optimizations);
+        } else if(config.optimizations) {
+            args.push("--optimizations", config.optimizations);
+        }
+
+        if(this.appSpecs.render_node) {
+            args.push("--render-node", this.appSpecs.render_node);
+        }
 
         let binary = STREAMERD_PATH;
 
@@ -261,7 +313,7 @@ export class LocalApplication extends ApplicationInstance {
             args.unshift("--leak-check=full");
         }
 
-        if(config.debug){
+        if(config.debug || this.appSpecs.debug){
             logger.info("Applying gst debug for profiling");
             extra_env["GST_DEBUG_DUMP_DOT_DIR"] = "/tmp/gst-debug";
             extra_env["GST_DEBUG"] = "INFO";
@@ -271,6 +323,7 @@ export class LocalApplication extends ApplicationInstance {
         if(config.resetLibva){
             extra_env["LIBVA_DRIVER_NAME"] = "";
         }
+
 
         logger.info("cmd: " + binary + " " + args.join(" "));
 
@@ -301,6 +354,7 @@ export class LocalApplication extends ApplicationInstance {
 
         proc.on("exit", (code, signal) => {
             logger.info("Streamerd exited with code " + code + " " + signal + " " + proc.exitCode);
+            delete this.streamer;
         });
 
         return proc;
@@ -327,16 +381,35 @@ export class LocalApplication extends ApplicationInstance {
 
     async requestStop(){
         await super.requestStop();
-        if(!this.proc){
-            return;
+        if(this.proc){
+            this.proc.kill();
+            setTimeout(() => {
+                logger.warn("Process did not exit within timeout, killing with SIGKILL. ");
+                if(this.proc){
+                    this.proc.kill("SIGKILL");
+                }
+                if(this.streamer) {
+                    this.streamer.kill();
+                    setTimeout(() => {
+                        logger.warn("Streamerd did not exit within timeout, killing with SIGKILL. ");
+                        if(this.streamer){
+                            this.streamer.kill("SIGKILL");
+                        }
+                    }, config.managementOptions.streamerExitRequestTimeoutMs || (30 * 1000));
+                }
+            }, config.managementOptions.procExitRequestTimeoutMs || (30 * 1000));
         }
-        this.proc.kill();
-        setTimeout(() => {
-            logger.warn("Process did not exit within timeout, killing with SIGKILL. ");
-            if(this.proc){
-                this.proc.kill("SIGKILL");
+        
+    }
+
+    handleExtension(name, data) {
+        if(name == "wayland_init"){
+            if(!this.waylandDisplayId){
+                this.waylandDisplayId = data;
+                // trigger main process
+                this._startApp();
             }
-        }, config.managementOptions.procExitRequestTimeoutMs || (30 * 1000));
+        }
     }
 }
 

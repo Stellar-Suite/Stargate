@@ -108,6 +108,7 @@ router.all("/try_login", (req, res) => {
 });
 
 router.get("/apps", (req, res) => {
+    // console.log(config.appSpecs);
     res.json({
         ok: true,
         data: config.appSpecs
@@ -233,6 +234,30 @@ router.get("/session/:id", (req, res) => {
     });
 });
 
+router.delete("/session/:id", async (req,res) => {
+    let uid = getUidOf(req);
+    if(!uid){
+        res.status(403).send("Invalid user. ");
+        return;
+    }
+    if(!userSessions.get(uid)){
+        res.status(404).send("User has no session. ");
+        return;
+    }
+    let session = m.getSession(req.params.id);
+    if(!session || session.user.id != uid){
+        if(session.user.id != uid) {
+            console.warn("User " + uid + " tried to stop session " + req.params.id + " but it was owned by " + session.user.id);
+        }
+        res.status(404).send("Session not found. ");
+        return;
+    }
+    await session.requestStop();
+    res.json({
+        ok: true
+    });
+});
+
 
 router.delete("/session", async (req,res) => {
     let uid = getUidOf(req);
@@ -334,6 +359,28 @@ io.on("connection", (socket) => {
             sess.socketID = socket.id;
         } else {
             logger.info("Denied " + socket.id + " from privliged state set operation.");
+        }
+    });
+
+    socket.on("ext_wayland_init", (display_id) => {
+        logger.info("Wayland init for display id " + display_id);
+        let socketObj = sockIDMap.get(socket.id);
+        if(socketObj.sid && socketObj.privs >= 2){
+            let sess = m.getSession(socketObj.sid);
+            sess.handleExtension("wayland_init", display_id);
+        } else {
+            logger.info("Denied " + socket.id + " from privliged ext_wayland_init operation.");
+        }
+    });
+
+    socket.on("ext_other", (name, data) => {
+        logger.info("Other extension " + name);
+        let socketObj = sockIDMap.get(socket.id);
+        if(socketObj.sid && socketObj.privs >= 2){
+            let sess = m.getSession(socketObj.sid);
+            sess.handleExtension(name, data);
+        } else {
+            logger.info("Denied " + socket.id + " from privliged extension operation.");
         }
     });
 
